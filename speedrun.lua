@@ -6,10 +6,6 @@
 
 local sr = {}
 
--- Instruction types
--- {time(num), inputs(str)} : hold the given <inputs> for <time> frames
--- {func(str/function), [args], ..., inputs}
-
 local keys = {"run", "altRun", "up", "down", "left", "right", "jump", "altJump", "dropItem", "pause"}
 local charToKey = {
 	j = "jump",
@@ -24,7 +20,7 @@ local charToKey = {
 	t = "altRun",
 }
 
-local sectInputs, currentInputs, currentSect, addr, doNext
+local sectionInputs, currentInputs, currentSect, addr
 local flags = {
 	ignorePause = false,
 }
@@ -37,12 +33,38 @@ local strToComparison = {
 	["<"] = function(a, b) return a > b end,
 }
 
+local function copy(x)
+	if type(x) == "table" then
+		return table.deepclone(x)
+	else
+		return x
+	end
+end
+
 -- args[1] is always the name of the function
 -- args[#args] is generally the input codes
 local builtins = {
-	-- x position check
+	--[[ repeat n times. Example (performs 4 standing max-height jumps in a row):
+	{"dotimes",4,{
+		"",{"tg"},  -- wait until on the ground (if starting on the ground, we IMMEDIATELY do the next input)
+		"j",{"md"}, -- hold the jump key until beginning to move downward (this will occur at the apex of the jump)
+	}}
+	]]
+	dotimes = function(args)
+		local reps = args[2]
+		local inputSeq = args[3]
+		for i = 1,reps do
+			for k,v in ipairs(inputSeq) do
+				table.insert(currentInputs, addr+k, copy(v))
+			end
+		end
+		return -1
+	end,
+	--[[ x position check. examples:
+		"rn",{"x",">=",512}, -- run to the right until x position is at least 512 pixels
+		"ln",{"x","<",512}, -- run to the left until x position is less than 512 pixels
+	]]
 	x = function(args)
-		print(lunatime.tick()..": called x")
 		return strToComparison[args[2]](player.x, args[3])
 	end,
 	-- y position check
@@ -61,75 +83,77 @@ local builtins = {
 	tg = function() return player:isGroundTouching() end,
 	-- not touching ground
 	ntg = function() return not player:isGroundTouching() end,
-	
-	-- not
-	-- ["not"] = function(args)
-		-- local func = args[2]
-		-- local typ = type(cond)
-		-- if typ == "string" then
-			-- if builtins[func] then
-				-- return not builtins[func](args)
-			-- else
-				-- error("No builtin with name '"..func.."'")
-			-- end
-		-- elseif typ == "function" then
-			-- return not func()
-		-- end
-	-- end
 }
 
-local function runInstruction()
-	doNext = false
-	local instr = currentInputs[addr+1]
+local function runFunction()
+	local instr
+	if type(currentInputs[addr]) == "string" then
+		instr = currentInputs[addr+1]
+	else
+		instr = currentInputs[addr]
+	end
 	
 	-- process the condition for this instruction; return true if condition has been met
-	local done = false
 	local func = instr[1]
 	local typ = type(func)
 	if typ == "number" then
 		instr[1] = func - 1
-		done = func == 0
+		return func == 0
 	elseif typ == "string" then
 		if flags[func] ~= nil then
 			flags[func] = not flags[func]
-			doNext = true
+			return true
 		else
 			if builtins[func] then
-				done = builtins[func](instr)
+				return builtins[func](instr)
 			else
 				error("No builtin with name '"..func.."'")
 			end
 		end
 	elseif typ == "function" then
-		done = func(instr)
+		return func(instr)
 	else
 		error("Invalid instruction: "..func)
 	end
+end
+
+local function runInstruction()
+	local doNext = runFunction()
 	
-	if done and addr + 2 <= #currentInputs then
-		addr = addr + 2
-	end
-	
-	if not doNext then
-		local inputs = currentInputs[addr]
-		-- process player inputs
-		local newkeys = {}
-		for c in inputs:gmatch(".") do
-			newkeys[charToKey[c] or error("Invalid key code: "..c)] = true
-		end
-		for _,k in ipairs(keys) do
-			if newkeys[k] then
-				player.keys[k] = true
-			else
-				player.keys[k] = false
+	if addr <= #currentInputs then
+		if not doNext then
+			local inputs = currentInputs[addr]
+			if type(inputs) ~= "string" then
+				local msg = "table:"
+				for k,v in pairs(inputs) do
+					msg = msg.."\n  "..tostring(k)..": "..tostring(v)
+				end
+				Misc.dialog(msg)
+			end
+			-- process player inputs
+			local newkeys = {}
+			for c in inputs:gmatch(".") do
+				newkeys[charToKey[c] or error("Invalid key code: "..c)] = true
+			end
+			for _,k in ipairs(keys) do
+				if newkeys[k] then
+					player.keys[k] = true
+				else
+					player.keys[k] = false
+				end
+			end
+		else
+			if doNext == true then
+				addr = addr + 2
+			elseif doNext == -1 then
+				addr = addr + 1
+			end
+			print(lunatime.tick()..": "..addr)
+			if addr <= #currentInputs then
+				runInstruction()
 			end
 		end
-	else
-		addr = addr + 2
-		parseInstruction()
 	end
-	
-	return done
 end
 
 function sr.onInitAPI()
@@ -139,19 +163,31 @@ end
 
 function sr.onStart()
 	local file = "__speedrun/runs/"..Level.filename():gsub(".lvlx", ""):gsub(".lvl","")
+	print("attempt to open "..Misc.episodePath()..file..".lua")
 	local f = io.open(Misc.episodePath()..file..".lua")
 	if f ~= nil then
+		print("good")
 		f:close()
-		sectInputs = require(file)
+		local inputList = require(file)
+		if inputList.global then
+			currentInputs = inputList
+			addr = 1
+			assert(currentInputs, "currentInputs empty after set")
+		else
+			sectionInputs = inputList
+			assert(sectionInputs, "secttionInputs empty after set")
+		end
 	else
-		sectInputs = {}
+		print("bad")
+		sectionInputs = {}
 	end
 end
 
 function sr.onInputUpdate()
-	if player.section ~= currentSect then
+	if lunatime.tick() == 0 then return end
+	if sectionInputs and player.section ~= currentSect then
 		currentSect = player.section
-		currentInputs = sectInputs[player.section]
+		currentInputs = sectionInputs[player.section]
 		addr = 1
 	end
 	
@@ -164,6 +200,7 @@ function sr.onInputUpdate()
 	-- end
 	if not currentInputs or addr > #currentInputs or (not flags.ignorePause and Misc.isPaused()) then return end
 	
+	-- Misc.dialog(lunatime.tick()..": "..addr)
 	runInstruction()
 end
 
