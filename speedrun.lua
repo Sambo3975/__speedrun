@@ -41,6 +41,8 @@ local function copy(x)
 	end
 end
 
+local runFunction
+
 -- args[1] is always the name of the function
 -- args[#args] is generally the input codes
 local builtins = {
@@ -60,6 +62,18 @@ local builtins = {
 		end
 		return -1
 	end,
+	--[[ check for the first condition until it is met, and then the second, and so on, until all conditions have been met. Example:
+	"rn",{"then",{{"x",">=",-198240},{"tg"}}}, -- run right until x is at least -198240, then we are touching the ground
+	]]
+	["then"] = function(args)
+		local conditions = args[2]
+		if runFunction(conditions[1]) then
+			table.remove(conditions, 1)
+		end
+		if #conditions == 0 then
+			return true
+		end
+	end,
 	--[[ x position check. examples:
 		"rn",{"x",">=",512}, -- run to the right until x position is at least 512 pixels
 		"ln",{"x","<",512}, -- run to the left until x position is less than 512 pixels
@@ -74,7 +88,7 @@ local builtins = {
 	-- moving up
 	mu = function() return player.speedY < 0 end,
 	-- moving down
-	md = function() return player.speedY >= 0 end,
+	md = function() return not player:isGroundTouching() and player.speedY >= 0 end,
 	-- moving left
 	ml = function() return player.speedX <= 0 end,
 	-- moving right
@@ -85,12 +99,13 @@ local builtins = {
 	ntg = function() return not player:isGroundTouching() end,
 }
 
-local function runFunction()
-	local instr
-	if type(currentInputs[addr]) == "string" then
-		instr = currentInputs[addr+1]
-	else
-		instr = currentInputs[addr]
+function runFunction(instr)
+	if not instr then
+		if type(currentInputs[addr]) == "string" then
+			instr = currentInputs[addr+1]
+		else
+			instr = currentInputs[addr]
+		end
 	end
 	
 	-- process the condition for this instruction; return true if condition has been met
