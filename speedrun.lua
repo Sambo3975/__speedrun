@@ -133,7 +133,10 @@ function runFunction(instr)
 end
 
 local function runInstruction()
-	local doNext = runFunction()
+	local doNext
+	if not Misc.isPaused() or not flags.ignorePause then
+		doNext = runFunction()
+	end
 	
 	if addr <= #currentInputs then
 		if not doNext then
@@ -213,7 +216,7 @@ function sr.onInputUpdate()
 	-- elseif not not flags.ignorePause and Misc.isPaused() then
 		-- Misc.dialog("paused")
 	-- end
-	if not currentInputs or addr > #currentInputs or (not flags.ignorePause and Misc.isPaused()) then return end
+	if not currentInputs or addr > #currentInputs then return end
 	
 	-- Misc.dialog(lunatime.tick()..": "..addr)
 	runInstruction()
