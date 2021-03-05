@@ -141,13 +141,6 @@ local function runInstruction()
 	if addr <= #currentInputs then
 		if not doNext then
 			local inputs = currentInputs[addr]
-			if type(inputs) ~= "string" then
-				local msg = "table:"
-				for k,v in pairs(inputs) do
-					msg = msg.."\n  "..tostring(k)..": "..tostring(v)
-				end
-				Misc.dialog(msg)
-			end
 			-- process player inputs
 			local newkeys = {}
 			for c in inputs:gmatch(".") do
@@ -166,7 +159,6 @@ local function runInstruction()
 			elseif doNext == -1 then
 				addr = addr + 1
 			end
-			print(lunatime.tick()..": "..addr)
 			if addr <= #currentInputs then
 				runInstruction()
 			end
@@ -181,10 +173,8 @@ end
 
 function sr.onStart()
 	local file = "__speedrun/runs/"..Level.filename():gsub(".lvlx", ""):gsub(".lvl","")
-	print("attempt to open "..Misc.episodePath()..file..".lua")
 	local f = io.open(Misc.episodePath()..file..".lua")
 	if f ~= nil then
-		print("good")
 		f:close()
 		local inputList = require(file)
 		if inputList.global then
@@ -196,7 +186,6 @@ function sr.onStart()
 			assert(sectionInputs, "secttionInputs empty after set")
 		end
 	else
-		print("bad")
 		sectionInputs = {}
 	end
 end
