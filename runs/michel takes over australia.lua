@@ -122,7 +122,19 @@ return {
 		"rn",{"tg"},
 		"jrn",{10},   -- collect as many of the coins as possible
 		"rn",{"tg"},
+		"jrn",{12},   -- jump over the falling rocks
+		"rn",{8},
+		"d",{59},
+		"arn",{"md"},
+		"drn",{"x",">=",-185472-8},
+		"dln",{"ml"},
+		-- "dn",{4},
+		"drn",{"tg"},
+		"rn",{35},
 		"jrn",{12},
+		"rn",{"tg"},
+		"jrn",{7},
+		"drn",{"tg"},
 		
 		"rn",{100},
 	},
