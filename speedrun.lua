@@ -188,6 +188,7 @@ function sr.onStart()
 	else
 		sectionInputs = {}
 	end
+	RNG.seed = 8675309
 end
 
 function sr.onInputUpdate()
