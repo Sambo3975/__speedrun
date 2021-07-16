@@ -82,5 +82,4 @@ function utils.onDraw()
 		Text.print(tostring(player.IsInWater), 10, 540)
 	end
 end
-
 return utils

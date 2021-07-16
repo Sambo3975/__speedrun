@@ -68,7 +68,6 @@ local builtins = {
 		end
 		return -1
 	end,
-	
 	--- Insert the given input instructions to the current position in the input list.
 	-- @tparam table inputs The inputs to insert.
 	["do"] = function(args)
