@@ -417,7 +417,7 @@ local function runInstruction(recursiveCall)
 
 	local doNext
 	if not Misc.isPaused() or not flags.ignorePause and inputOverrideTimer <= 0 then
-		if not recursiveCall and GameData.speedrunOptimization.started then
+		if not recursiveCall and speedrunOptimization.started then
 			checkOptimizationConditions()
 		end
 		doNext = runFunction()
