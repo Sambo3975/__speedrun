@@ -149,6 +149,8 @@ local builtins = {
 	niw = function() return player.IsInWater ~= -1 end,
 	--- dead -- mainly used as a test for the optimize function
 	dead = function() return player.deathTimer > 0 end,
+	--- standing on NPC
+	snpc = function() return player.standingNPC ~= nil end,
 }
 
 --[[ conditional branch
@@ -202,6 +204,7 @@ builtins["randomInput"] = function(args)
 end
 
 function checkCondition(instr)
+	-- Misc.dialog(instr)
 	local func = instr[1]
 	local typ = type(func)
 	if typ == "number" then

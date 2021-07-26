@@ -25,6 +25,13 @@ function utils.tp(x, y)
 	end
 end
 
+function utils.pow(state)
+	return function()
+		player.powerup = state
+		return -1
+	end
+end
+
 function utils.dialog(msg)
 	return function()
 		Misc.dialog(msg)
