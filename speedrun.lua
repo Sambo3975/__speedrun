@@ -486,7 +486,7 @@ function sr.onMessageBox()
 end
 
 function sr.onStart()
-	local file = "__speedrun/runs/"..Level.filename():gsub(".lvlx", ""):gsub(".lvl","")
+	local file = "__runs/"..Level.filename():gsub(".lvlx", ""):gsub(".lvl","")
 	local f = io.open(Misc.episodePath()..file..".lua")
 	local seedOverride
 	if f ~= nil then
