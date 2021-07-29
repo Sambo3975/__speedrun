@@ -81,12 +81,21 @@ utils.maxJumps = {
 	[CHARACTER_MARIO] = 37,
 }
 
-registerEvent(utils, "onDraw")
-function utils.onDraw()
+registerEvent(utils, "onCameraDraw")
+function utils.onCameraDraw(idx)
+	local prints = {}
 	if utils.showSpeeds then
-		Text.print(player.speedX, 10, 560)
-		Text.print(player.speedY, 10, 580)
-		Text.print(tostring(player.IsInWater), 10, 540)
+		table.insert(prints, player.speedX)
+		table.insert(prints, player.speedY)
+	end
+	if utils.showInWater then
+		table.insert(prints, player.isInWater)
+	end
+	local y = Camera(idx).height
+	for i = #prints,1,-1 do
+		y = y - 20
+		Text.printWP(prints[i], 10, y, 10)
 	end
 end
+
 return utils
