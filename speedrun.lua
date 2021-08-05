@@ -85,12 +85,23 @@ local builtins = {
 	-- @tparam table conditions The conditions to check, in order.
 	-- @return true if all the conditions have been met, in order.
 	["then"] = function(args)
-		local conditions = args[2]
-		if runFunction(conditions[1]) then
-			table.remove(conditions, 1)
-		end
-		if #conditions == 0 then
-			return true
+		if #args == 2 and type(args[2][1]) == "table" then
+			-- old system - 1 arg containing all conditions {"then",{{c1},{c2}}},
+			local conditions = args[2]
+			if runFunction(conditions[1]) then
+				table.remove(conditions, 1)
+			end
+			if #conditions == 0 then
+				return true
+			end
+		else
+			-- new system - k args, one for each condition {"then",{c1},{c2}},
+			if runFunction(args[2]) then
+				table.remove(args, 2)
+			end
+			if #args == 1 then
+				return true
+			end
 		end
 	end,
 	
