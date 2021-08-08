@@ -215,6 +215,11 @@ builtins["randomInput"] = function(args)
 end
 
 function checkCondition(instr)
+	-- implicit 'then' if instr is of the form 'inputs,{{c1},{c2}}'
+	if type(instr[1]) == "table" then
+		return checkCondition{"then",instr}
+	end
+	
 	-- Misc.dialog(instr)
 	local func = instr[1]
 	local typ = type(func)
@@ -528,7 +533,11 @@ function sr.onInputUpdate()
 	if lunatime.tick() == 0 then return end
 	if sectionInputs and player.section ~= currentSect then
 		currentSect = player.section
-		currentInputs = sectionInputs[player.section]
+		if sectionInputs[player.section] then
+			currentInputs = table.deepclone(sectionInputs[player.section])
+		else
+			currentInputs = nil
+		end
 		addr = 1
 	end
 	
