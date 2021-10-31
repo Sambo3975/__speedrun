@@ -15,9 +15,21 @@ This will load the TASBot for the episode, which will override inputs if a) a le
 entered in-game with the second save file slot being used; and b) there is a .lua file containing input instructions for the current level. You must put this at the _very top_ 
 of the episode's luna.lua file, to ensure that it runs before all onInputUpdate functions in libraries, episode code, and level code. Otherwise, you may get strange behavior.
 
-3. Create a `.lua` file in the `runs` folder with the same name as the level you wish to TAS. For example, if the level is named `watermelon.lvlx`, you would create a file in the 
+3. In the episode folder, create a folder named `__runs`. This should be on the same level as the `__speedrun` folder, not inside it.
+
+4. Create a `.lua` file in the `runs` folder with the same name as the level you wish to TAS. For example, if the level is named `watermelon.lvlx`, you would create a file in the 
 `runs` folder named `watermelon.lua`.
 
-4. make that .lua file return a table with the input instructions for the level.
+Keeping with the `watermelon` example from above, the resulting directory structure should look like this:
+```
+EpisodeFolder/
+	__speedrun/
+	__runs/
+		watermelon.lua
+	watermelon/
+	watermelon.lvlx
+```
+
+5. make that .lua file return a table with the input instructions for the level. Look inside `__speedrun/speedrun.lua` for documentation.
 
 There are a couple of example input files for Enjl's episode, Subzero Heroes, in the `runs` folder. These should shed some light on how this library is used.
