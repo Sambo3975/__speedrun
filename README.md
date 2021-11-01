@@ -31,5 +31,3 @@ EpisodeFolder/
 ```
 
 5. make that .lua file return a table with the input instructions for the level. Look inside `__speedrun/speedrun.lua` for documentation.
-
-There are a couple of example input files for Enjl's episode, Subzero Heroes, in the `runs` folder. These should shed some light on how this library is used.
