@@ -443,6 +443,23 @@ local function checkOptimizationConditions()
 	end
 end
 
+local lastKeys = {}
+-- Manipulate a key in rawKeys by circumventing the table's __newindex function
+-- This should normally never be done, but in the case of a TASBot...
+local function setRawKey(k, v)
+	if not lastKeys[k] and v then
+		v = KEYS_PRESSED
+	elseif lastKeys[k] and v then
+		v = KEYS_DOWN
+	elseif lastKeys[k] and not v then
+		v = KEYS_UNPRESSED
+	elseif not lastKeys[k] and not v then
+		v = KEYS_UP
+	end
+	rawset(player.rawKeys, k, v)
+	lastKeys[k] = (v ~= nil) and (v ~= false)
+end
+
 local function manageInputs()
 	local inputs
 	if inputOverrideTimer > 0 then
@@ -464,6 +481,7 @@ local function manageInputs()
 			-- player.keys[k] = false
 		-- end
 		player.keys[k] = newkeys[k]
+		setRawKey(k, newkeys[k])
 	end
 end
 
