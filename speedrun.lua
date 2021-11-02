@@ -164,6 +164,21 @@ local builtins = {
 	snpc = function() return player.standingNPC ~= nil end,
 }
 
+--[[ while loop
+{"while",{condition},{
+	actions
+}},
+]]
+builtins["while"] = function(args)
+	-- Misc.dialog(currentInputs)
+	if runFunction(args[2]) then
+		builtins["do"]{args[1],{args}} -- insert a copy of this function
+		builtins["do"]{args[1],args[3]} -- insert the actions
+	end
+	-- Misc.dialog(currentInputs)
+	return -1
+end
+
 --[[ conditional branch
 {"if",{condition},
 		{actions if true},
@@ -240,9 +255,6 @@ function checkCondition(instr)
 	elseif typ == "function" then
 		return func(instr)
 	else
-		if typ == "table" then
-			Misc.dialog(func)
-		end
 		error("Invalid instruction: "..tostring(func))
 	end
 end
@@ -431,6 +443,30 @@ local function checkOptimizationConditions()
 	end
 end
 
+local function manageInputs()
+	local inputs
+	if inputOverrideTimer > 0 then
+		-- print("inputOverrideTimer > 0")
+		inputs = inputOverride
+		inputOverrideTimer = inputOverrideTimer - 1
+	else
+		inputs = currentInputs[addr]
+	end
+	-- process player inputs
+	local newkeys = {}
+	for c in inputs:gmatch(".") do
+		newkeys[charToKey[c] or error("Invalid key code: "..c)] = true
+	end
+	for _,k in ipairs(keys) do
+		-- if newkeys[k] then
+			-- player.keys[k] = true
+		-- else
+			-- player.keys[k] = false
+		-- end
+		player.keys[k] = newkeys[k]
+	end
+end
+
 local function runInstruction(recursiveCall)
 
 	local doNext
@@ -443,26 +479,7 @@ local function runInstruction(recursiveCall)
 	
 	if addr <= #currentInputs then
 		if not doNext then
-			local inputs
-			if inputOverrideTimer > 0 then
-				-- print("inputOverrideTimer > 0")
-				inputs = inputOverride
-				inputOverrideTimer = inputOverrideTimer - 1
-			else
-				inputs = currentInputs[addr]
-			end
-			-- process player inputs
-			local newkeys = {}
-			for c in inputs:gmatch(".") do
-				newkeys[charToKey[c] or error("Invalid key code: "..c)] = true
-			end
-			for _,k in ipairs(keys) do
-				if newkeys[k] then
-					player.keys[k] = true
-				else
-					player.keys[k] = false
-				end
-			end
+			manageInputs()
 		else
 			if doNext == true then
 				addr = addr + 2
@@ -478,7 +495,9 @@ end
 
 -- registerEvent(sr, "onInputUpdate")
 function sr.onInitAPI()
-	registerEvent(sr, "onInputUpdate", "onInputUpdate", true)
+	registerEvent(sr, "onInputUpdate")
+	-- registerEvent(sr, "onInputUpdate", "onInputUpdateLate", false)
+	-- registerEvent(sr, "onTick", "onInputUpdateLate")
 	registerEvent(sr, "onStart", "onStart", false)
 	registerEvent(sr, "onMessageBox")
 	-- stuff to find a working seed while AFK
@@ -507,7 +526,9 @@ function sr.onStart()
 	local seedOverride
 	if f ~= nil then
 		f:close()
+		-- Misc.dialog(file)
 		local inputList = require(file)
+		-- Misc.dialog(inputList)
 		if inputList.global then
 			currentInputs = inputList
 			addr = 1
@@ -529,7 +550,9 @@ end
 
 function sr.onInputUpdate()
 	-- Misc.dialog("seed = "..RNG.seed)
-	-- Misc.dialog("speedrun")
+	-- if checkCondition{"tg"} then
+		-- Misc.dialog("speedrun onInputUpdate")
+	-- end
 	if lunatime.tick() == 0 then return end
 	if sectionInputs and player.section ~= currentSect then
 		currentSect = player.section
@@ -557,7 +580,26 @@ function sr.onInputUpdate()
 	-- Misc.dialog(lunatime.tick()..": "..addr)
 	runInstruction()
 	
+	-- if player.keys.jump == KEYS_PRESSED and Misc.isPaused() then
+		-- Misc.dialog("sr: jump pressed")
+	-- end
+	
 	showingMessageBox = false
+end
+
+-- still pressed by this point
+function sr.onInputUpdateLate()
+	if lunatime.tick() == 0 then return end
+	-- if checkCondition{"tg"} then
+		-- Misc.dialog("speedrun onInputUpdateLate")
+	-- end
+	-- manageInputs()
+	-- if player.keys.jump == KEYS_PRESSED and Misc.isPaused() then
+		-- Misc.dialog("sr2: jump pressed")
+	-- end
+	-- if Misc.isPaused() then
+		-- Misc.dialog("sr: "..tostring(player.keys.jump))
+	-- end
 end
 
 return sr
