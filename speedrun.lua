@@ -164,6 +164,8 @@ local builtins = {
 	dead = function() return player.deathTimer > 0 end,
 	--- standing on NPC
 	snpc = function() return player.standingNPC ~= nil end,
+	--- holding an item
+	hnpc = function() return player.holdingNPC ~= nil end,
 }
 
 --[[ while loop
