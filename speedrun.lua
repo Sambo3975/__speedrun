@@ -152,6 +152,8 @@ local builtins = {
 	mb = function() return showingMessageBox end,
 	--- climbing
 	cl = function() return player:isClimbing() end,
+	-- forced state
+	fs = function() return player.forcedState ~= FORCEDSTATE_NONE end,
 	--- no forced state
 	nfs = function() return player.forcedState == FORCEDSTATE_NONE end,
 	--- in water
