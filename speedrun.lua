@@ -518,6 +518,7 @@ end
 -- registerEvent(sr, "onInputUpdate")
 function sr.onInitAPI()
 	registerEvent(sr, "onInputUpdate")
+	registerEvent(sr, "onDrawEnd")
 	-- registerEvent(sr, "onInputUpdate", "onInputUpdateLate", false)
 	-- registerEvent(sr, "onTick", "onInputUpdateLate")
 	registerEvent(sr, "onStart", "onStart", false)
@@ -622,6 +623,12 @@ function sr.onInputUpdateLate()
 	-- if Misc.isPaused() then
 		-- Misc.dialog("sr: "..tostring(player.keys.jump))
 	-- end
+end
+
+function sr.onDrawEnd()
+	for _,k in ipairs(keys) do
+		rawset(player.rawKeys, k, nil)
+	end
 end
 
 return sr
