@@ -32,4 +32,59 @@ EpisodeFolder/
 	watermelon.lvlx
 ```
 
-5. make that .lua file return a table with the input instructions for the level. Look inside `__speedrun/speedrun.lua` for documentation.
+5. make that .lua file return a table with the input instructions for the level. Look inside `__speedrun/speedrun.lua` for documentation. I am currently working on adding more documentation here
+
+# Using the Library
+
+This library uses input instruction tables to tell the bot what to input to the player. Input instruction tables have an appearance similar to a Lisp (list-processing) language. This is because they do essentially the same thing, but with a Lua table instead of a linked list.
+
+This library expects the `.lua` file for each level to return a table of input instructions. Read on for more information. For the samples of code below, we will stick with the `watermelon` example from the previous section
+
+## Structure
+
+There are two types of structures available. The input instructions may be stored per-section, or they may be global to the entire level.
+
+### Per-section inputs
+
+This is generally the recommended structure to use. To use it, simply store inputs at indexes corresponding to the section indexes. Since sections are zero-indexed and Lua tables are normally one-indexed, you will need to manually assign to index zero, giving you a `watermelon.lua` file that looks like this:
+
+```lua
+return {
+    [0] = {
+        -- ... instructions for section 0 here ...
+    },
+    {
+        -- ... instructions for section 1 here ...
+    },
+    -- ... instructions for any other sections. There may be gaps in this table if necessary ...
+}
+```
+
+### Level-wide inputs
+
+This stores inputs for the whole level in a single list. This should only be used in a limited set of circumstances, such as on a world map. To use this mode, set the `global` key in your table. This results in a file like this:
+
+```lua
+return {
+    global = true,
+    -- ... instructions for level here ...
+}
+```
+
+## Setting the seed for the derandomizer
+
+By default, the derandomizer sets the RNG seed to `8675309`. Chances are, this isn't the optimal seed. You can change the seed by setting the `seed` key in the inputs table:
+
+```lua
+return {
+    seed = 23409485023
+    [0] = {
+        -- ...
+    },
+    -- ...
+}
+```
+
+As for methods for finding the best seed, you're on your own. This is not an area I know much about. However, if, like me, you put the TAS together one section at a time, you may find that the RNG stuff differs from your testing during the final run. There is some crude functionality in this library for handling that situation. This works by repeatedly selecting random seeds until one is found that does not result in the player's death. This isn't yet fully implemented.
+
+To enable it, uncomment lines 527, 528, and 570, and comment out line 568 in `speedrun.lua`, then run the level with the TASBot. The run will proceed until the player dies, then it will restart. This will continue until the level has been cleared, at which point, a dialog will appear showing the seed that worked. Copy that seed into the seed field of the instruction table. Note that this could take several hours. I would recommend running it overnight or at any other time when you will be away from the computer.
