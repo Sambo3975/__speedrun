@@ -3,4 +3,4 @@ A TASBot for SMBX2, implemented in the engine's Lua API. This bot allows for ful
 
 Note: The derandomizer sets the built-in RNG library to always use a specific seed. As such, it will not derandomize NPCs from SMBX 1.3, nor will it derandomize any code that creates its own RNG instance.
 
-See the wiki for documentation.
+See the [wiki](https://github.com/Sambo3975/__speedrun/wiki/) for documentation.
