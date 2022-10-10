@@ -152,6 +152,8 @@ local builtins = {
 	mb = function() return showingMessageBox end,
 	--- climbing
 	cl = function() return player:isClimbing() end,
+	-- forced state
+	fs = function() return player.forcedState ~= FORCEDSTATE_NONE end,
 	--- no forced state
 	nfs = function() return player.forcedState == FORCEDSTATE_NONE end,
 	--- in water
@@ -516,6 +518,7 @@ end
 -- registerEvent(sr, "onInputUpdate")
 function sr.onInitAPI()
 	registerEvent(sr, "onInputUpdate")
+	registerEvent(sr, "onDrawEnd")
 	-- registerEvent(sr, "onInputUpdate", "onInputUpdateLate", false)
 	-- registerEvent(sr, "onTick", "onInputUpdateLate")
 	registerEvent(sr, "onStart", "onStart", false)
@@ -620,6 +623,12 @@ function sr.onInputUpdateLate()
 	-- if Misc.isPaused() then
 		-- Misc.dialog("sr: "..tostring(player.keys.jump))
 	-- end
+end
+
+function sr.onDrawEnd()
+	for _,k in ipairs(keys) do
+		rawset(player.rawKeys, k, nil)
+	end
 end
 
 return sr
