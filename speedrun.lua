@@ -166,6 +166,8 @@ local builtins = {
 	snpc = function() return player.standingNPC ~= nil end,
 	--- holding an item
 	hnpc = function() return player.holdingNPC ~= nil end,
+	--- not holding an item
+	nhnpc = function() return player.holdingNPC == nil end,
 }
 
 --[[ while loop
@@ -535,7 +537,7 @@ end
 
 function sr.onExitLevel(winType)
 	if winType ~= LEVEL_WIN_TYPE_NONE then
-		Misc.dialog("succeeded on seed "..seed)
+		Misc.richDialog("succeeded on seed "..seed)
 	end
 end
 
