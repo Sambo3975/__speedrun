@@ -16,6 +16,22 @@ function utils.tick()
 	return -1
 end
 
+local tps
+function utils.warp(newTPS)
+	return function()
+		tps = Misc.GetEngineTPS()
+		Misc.SetEngineTPS(newTPS or 10000)
+		return -1
+	end
+end
+
+function utils.endWarp()
+	return function()
+		Misc.SetEngineTPS(tps)
+		return -1
+	end
+end
+
 function utils.tp(x, y)
 	return function()
 		player:teleport(x, y) 
