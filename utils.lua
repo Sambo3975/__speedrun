@@ -33,6 +33,8 @@ function utils.endWarp()
 end
 
 function utils.tp(x, y)
+	assert(x, "Missing x coordinate for teleport")
+	assert(y, "Missing y coordinate for teleport")
 	return function()
 		player:teleport(x, y) 
 		player.speedX = 0 

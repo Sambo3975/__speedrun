@@ -518,7 +518,7 @@ end
 -- registerEvent(sr, "onInputUpdate")
 function sr.onInitAPI()
 	registerEvent(sr, "onInputUpdate")
-	registerEvent(sr, "onDrawEnd")
+	-- registerEvent(sr, "onDrawEnd")
 	-- registerEvent(sr, "onInputUpdate", "onInputUpdateLate", false)
 	-- registerEvent(sr, "onTick", "onInputUpdateLate")
 	registerEvent(sr, "onStart", "onStart", false)
