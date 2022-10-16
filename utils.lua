@@ -1,5 +1,15 @@
 local utils = {}
 
+utils.SMWMAP_PLAYER_STATE = {
+    NORMAL               = 0, -- just standing there
+    WALKING              = 1, -- walking along a path
+    SELECTED             = 2, -- just picked a level
+    WON                  = 3, -- just returned from a level, and is waiting to unlock some paths
+    CUSTOM_WARPING       = 4, -- using star road warp
+    PARKING_WHERE_I_WANT = 5, -- illparkwhereiwant / debug mode
+    SELECT_START         = 6, -- selecting the start point
+}
+
 local startTime = 0
 function utils.startTimer()
 	startTime = lunatime.tick()

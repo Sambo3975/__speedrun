@@ -8,6 +8,17 @@ local floor, ceil, max, huge = math.floor, math.ceil, math.max, math.huge
 
 local LO, HI = 0, 1
 
+-- SMWmap compatibility
+
+local smwMap
+
+-- done like this so that we don't load smwMap earlier than it normally would be
+local function lazyLoadSmwMap()
+	if (smwMap == nil) then
+		smwMap = require("smwMap")
+	end
+end
+
 local sr = {}
 
 local keys = {"run", "altRun", "up", "down", "left", "right", "jump", "altJump", "dropItem", "pause"}
@@ -118,6 +129,11 @@ local builtins = {
 		end
 		return false
 	end,
+	
+	-- Simple checks
+	
+	-- always true
+	t = function() return true end,
 	--- X Position Check. Examples:
 	--	"rn",{"x",">=",512}, -- run to the right until x position is at least 512 pixels
 	--	"ln",{"x","<",512}, -- run to the left until x position is less than 512 pixels
@@ -168,6 +184,30 @@ local builtins = {
 	hnpc = function() return player.holdingNPC ~= nil end,
 	--- not holding an item
 	nhnpc = function() return player.holdingNPC == nil end,
+	
+	--- smwMap functions
+	-- if the episode does not contain smwMap, calling these will cause an error
+	-- if the level that is being played does not load smwMap normally, these will try to load it, so don't call them if smwMap isn't running
+	
+	--- smwMap x position check
+	-- same as x(), but for smwMap
+	smwMapX = function(args)
+		lazyLoadSmwMap()
+		return strToComparison[args[2]](smwMap.mainPlayer.x, args[3])
+	end,
+	--- smwMap y position check
+	-- same as y(), but for smwMap
+	smwMapY = function(args)
+		lazyLoadSmwMap()
+		return strToComparison[args[2]](smwMap.mainPlayer.y, args[3])
+	end,
+	--- smwMap player state
+	-- compare smwMap main player's state value to the given state value
+	-- the values for each state can be found in utils.SMWMAP_PLAYER_STATE
+	smwMapState = function(args)
+		lazyLoadSmwMap()
+		return strToComparison[args[2]](smwMap.mainPlayer.state, args[3])
+	end,
 }
 
 --[[ while loop
@@ -574,6 +614,7 @@ function sr.onStart()
 end
 
 function sr.onInputUpdate()
+
 	-- Misc.dialog("seed = "..RNG.seed)
 	-- if checkCondition{"tg"} then
 		-- Misc.dialog("speedrun onInputUpdate")
