@@ -49,6 +49,10 @@ local strToComparison = {
 	[">="] = function(a, b) return a >= b end,
 	[">"] = function(a, b) return a > b end,
 }
+local function validateComparator(str)
+	assert(type(str) == "string", "comparator must be in a string")
+	assert(strToComparison[str], "Invalid comparator '"..str.."'")
+end
 
 local function copy(x)
 	if type(x) == "table" then
@@ -140,18 +144,24 @@ local builtins = {
 	-- @tparam string comparator The comparator to use. May be a string containing any Lua comparator ("<", "<=", "==", "~=", ">=", or ">").
 	-- @tparam number position The x-position to check against.
 	x = function(args)
+		validateComparator(args[2])
 		return strToComparison[args[2]](player.x, args[3])
 	end,
 	--- y position check
 	y = function(args)
+		validateComparator(args[2])
 		return strToComparison[args[2]](player.y, args[3])
 	end,
 	--- x speed check
 	sx = function(args)
+		validateComparator(args[2])
 		return strToComparison[args[2]](player.speedX, args[3])
 	end,
 	--- y speed check
-	sy = function(args) return strToComparison[args[2]](player.speedY, args[3]) end,
+	sy = function(args) 
+		validateComparator(args[2])
+		return strToComparison[args[2]](player.speedY, args[3])
+	end,
 	--- moving up
 	mu = function() return player.speedY < 0 end,
 	--- moving down
@@ -193,12 +203,14 @@ local builtins = {
 	-- same as x(), but for smwMap
 	smwMapX = function(args)
 		lazyLoadSmwMap()
+		validateComparator(args[2])
 		return strToComparison[args[2]](smwMap.mainPlayer.x, args[3])
 	end,
 	--- smwMap y position check
 	-- same as y(), but for smwMap
 	smwMapY = function(args)
 		lazyLoadSmwMap()
+		validateComparator(args[2])
 		return strToComparison[args[2]](smwMap.mainPlayer.y, args[3])
 	end,
 	--- smwMap player state
@@ -206,6 +218,7 @@ local builtins = {
 	-- the values for each state can be found in utils.SMWMAP_PLAYER_STATE
 	smwMapState = function(args)
 		lazyLoadSmwMap()
+		validateComparator(args[2])
 		return strToComparison[args[2]](smwMap.mainPlayer.state, args[3])
 	end,
 }
