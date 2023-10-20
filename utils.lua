@@ -1,31 +1,72 @@
 local utils = {}
 
+-- If true, the player's speed will be displayed
+utils.showSpeeds = false
+
+-- Constants for the basic optomizer (which is generally more trouble than it's worth)
+utils.optimizationModes = {
+	LO = 0,
+	HI = 1,
+}
+
+-- Number of frames to hold the jump button for a max-height running jump (vanilla characters only, incomplete)
+utils.maxJumps = {
+	[CHARACTER_MARIO] = 37,
+}
+
+-- SMWmap player states
+utils.SMWMAP_PLAYER_STATE = {
+    NORMAL               = 0, -- just standing there
+    WALKING              = 1, -- walking along a path
+    SELECTED             = 2, -- just picked a level
+    WON                  = 3, -- just returned from a level, and is waiting to unlock some paths
+    CUSTOM_WARPING       = 4, -- using star road warp
+    PARKING_WHERE_I_WANT = 5, -- illparkwhereiwant / debug mode
+    SELECT_START         = 6, -- selecting the start point
+}
+
 local startTime = 0
+<<<<<<< HEAD
 
 --- Start a timer that counts from the current tick.
+=======
+--- Start a frame timer
+>>>>>>> 08e0c78c3a269356fa0fe1adb29f29383b09fd5d
 function utils.startTimer()
 	startTime = lunatime.tick()
 	return -1
 end
 
+<<<<<<< HEAD
 --- Stop the timer and show a dialog box with the total counted time. Shows time since tick 0 if no timer was started.
+=======
+--- Stop the timer and display the amount of time elapsed since it started, in ticks. The same as calling lunatime.tick if no timer was started
+>>>>>>> 08e0c78c3a269356fa0fe1adb29f29383b09fd5d
 function utils.stopTimer()
 	Misc.dialog("Time: "..lunatime.tick() - startTime.." ticks")
 	return -1
 end
 
+<<<<<<< HEAD
 --- Show the current tick number in a dialog box
+=======
+--- Display the current tick number
+>>>>>>> 08e0c78c3a269356fa0fe1adb29f29383b09fd5d
 function utils.tick()
 	Misc.dialog("Tick: "..lunatime.tick())
 	return -1
 end
 
 local tps
---- Speed up the simulation to reduce wait times during testing. This should not be used for any portions of the run where realtime timers are used (such as Routine.waitSeconds), as this will make timings different from when the game is run at normal tick speed.
--- @tparam[default=10000] number newTPS TPS at which to run the simulation
+
+--- Set the tick rate. Can be used to speed up a test (to reduce iteration time), or to slow down the game and get a better look at what's
+-- happening. May have undesired results if the level being TASed uses Routines that call Routine.waitRealSeconds or the like
+-- @tparam[opt=10000] number newTPS new tick speed, in ticks/sec
 function utils.warp(newTPS)
 	return function()
-		tps = Misc.GetEngineTPS()
+		if not tps then
+			tps = Misc.GetEngineTPS()
+		end
 		Misc.SetEngineTPS(newTPS or 10000)
 		return -1
 	end
@@ -34,7 +75,7 @@ end
 --- Return the simulation speed to normal.
 function utils.endWarp()
 	return function()
-		Misc.SetEngineTPS(tps)
+		Misc.SetEngineTPS(tps or Misc.GetEngineTPS()) -- prevent getting an error if warp was never called
 		return -1
 	end
 end
@@ -43,6 +84,8 @@ end
 -- @tparam number x X-position to teleport to
 -- @tparam number y Y-position to teleport to
 function utils.tp(x, y)
+	assert(x, "Missing x coordinate for teleport")
+	assert(y, "Missing y coordinate for teleport")
 	return function()
 		player:teleport(x, y) 
 		player.speedX = 0 
@@ -51,7 +94,8 @@ function utils.tp(x, y)
 	end
 end
 
---- Set the player's powerup state. Used when skipping portions of a run for testing so that player state can be set to what it would be at the point we skip to.
+--- Set the player's powerup state
+-- @tparam number state The powerup state. The constants for these are listed at https://docs.codehaus.moe/#/constants/powerups
 function utils.pow(state)
 	return function()
 		player.powerup = state

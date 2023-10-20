@@ -8,6 +8,17 @@ local floor, ceil, max, huge = math.floor, math.ceil, math.max, math.huge
 
 local LO, HI = 0, 1
 
+-- SMWmap compatibility
+
+local smwMap
+
+-- done like this so that we don't load smwMap earlier than it normally would be
+local function lazyLoadSmwMap()
+	if (smwMap == nil) then
+		smwMap = require("smwMap")
+	end
+end
+
 local sr = {}
 
 local keys = {"run", "altRun", "up", "down", "left", "right", "jump", "altJump", "dropItem", "pause"}
@@ -38,6 +49,10 @@ local strToComparison = {
 	[">="] = function(a, b) return a >= b end,
 	[">"] = function(a, b) return a > b end,
 }
+local function validateComparator(str)
+	assert(type(str) == "string", "comparator must be in a string")
+	assert(strToComparison[str], "Invalid comparator '"..str.."'")
+end
 
 local function copy(x)
 	if type(x) == "table" then
@@ -118,24 +133,35 @@ local builtins = {
 		end
 		return false
 	end,
+	
+	-- Simple checks
+	
+	-- always true
+	t = function() return true end,
 	--- X Position Check. Examples:
 	--	"rn",{"x",">=",512}, -- run to the right until x position is at least 512 pixels
 	--	"ln",{"x","<",512}, -- run to the left until x position is less than 512 pixels
 	-- @tparam string comparator The comparator to use. May be a string containing any Lua comparator ("<", "<=", "==", "~=", ">=", or ">").
 	-- @tparam number position The x-position to check against.
 	x = function(args)
+		validateComparator(args[2])
 		return strToComparison[args[2]](player.x, args[3])
 	end,
 	--- y position check
 	y = function(args)
+		validateComparator(args[2])
 		return strToComparison[args[2]](player.y, args[3])
 	end,
 	--- x speed check
 	sx = function(args)
+		validateComparator(args[2])
 		return strToComparison[args[2]](player.speedX, args[3])
 	end,
 	--- y speed check
-	sy = function(args) return strToComparison[args[2]](player.speedY, args[3]) end,
+	sy = function(args) 
+		validateComparator(args[2])
+		return strToComparison[args[2]](player.speedY, args[3])
+	end,
 	--- moving up
 	mu = function() return player.speedY < 0 end,
 	--- moving down
@@ -168,6 +194,33 @@ local builtins = {
 	hnpc = function() return player.holdingNPC ~= nil end,
 	--- not holding an item
 	nhnpc = function() return player.holdingNPC == nil end,
+	
+	--- smwMap functions
+	-- if the episode does not contain smwMap, calling these will cause an error
+	-- if the level that is being played does not load smwMap normally, these will try to load it, so don't call them if smwMap isn't running
+	
+	--- smwMap x position check
+	-- same as x(), but for smwMap
+	smwMapX = function(args)
+		lazyLoadSmwMap()
+		validateComparator(args[2])
+		return strToComparison[args[2]](smwMap.mainPlayer.x, args[3])
+	end,
+	--- smwMap y position check
+	-- same as y(), but for smwMap
+	smwMapY = function(args)
+		lazyLoadSmwMap()
+		validateComparator(args[2])
+		return strToComparison[args[2]](smwMap.mainPlayer.y, args[3])
+	end,
+	--- smwMap player state
+	-- compare smwMap main player's state value to the given state value
+	-- the values for each state can be found in utils.SMWMAP_PLAYER_STATE
+	smwMapState = function(args)
+		lazyLoadSmwMap()
+		validateComparator(args[2])
+		return strToComparison[args[2]](smwMap.mainPlayer.state, args[3])
+	end,
 }
 
 --[[ while loop
@@ -520,7 +573,7 @@ end
 -- registerEvent(sr, "onInputUpdate")
 function sr.onInitAPI()
 	registerEvent(sr, "onInputUpdate")
-	registerEvent(sr, "onDrawEnd")
+	-- registerEvent(sr, "onDrawEnd")
 	-- registerEvent(sr, "onInputUpdate", "onInputUpdateLate", false)
 	-- registerEvent(sr, "onTick", "onInputUpdateLate")
 	registerEvent(sr, "onStart", "onStart", false)
@@ -574,6 +627,7 @@ function sr.onStart()
 end
 
 function sr.onInputUpdate()
+
 	-- Misc.dialog("seed = "..RNG.seed)
 	-- if checkCondition{"tg"} then
 		-- Misc.dialog("speedrun onInputUpdate")
