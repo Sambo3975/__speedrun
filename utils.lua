@@ -26,32 +26,20 @@ utils.SMWMAP_PLAYER_STATE = {
 }
 
 local startTime = 0
-<<<<<<< HEAD
 
 --- Start a timer that counts from the current tick.
-=======
---- Start a frame timer
->>>>>>> 08e0c78c3a269356fa0fe1adb29f29383b09fd5d
 function utils.startTimer()
 	startTime = lunatime.tick()
 	return -1
 end
 
-<<<<<<< HEAD
---- Stop the timer and show a dialog box with the total counted time. Shows time since tick 0 if no timer was started.
-=======
 --- Stop the timer and display the amount of time elapsed since it started, in ticks. The same as calling lunatime.tick if no timer was started
->>>>>>> 08e0c78c3a269356fa0fe1adb29f29383b09fd5d
 function utils.stopTimer()
 	Misc.dialog("Time: "..lunatime.tick() - startTime.." ticks")
 	return -1
 end
 
-<<<<<<< HEAD
 --- Show the current tick number in a dialog box
-=======
---- Display the current tick number
->>>>>>> 08e0c78c3a269356fa0fe1adb29f29383b09fd5d
 function utils.tick()
 	Misc.dialog("Tick: "..lunatime.tick())
 	return -1

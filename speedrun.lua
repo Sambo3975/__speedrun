@@ -19,6 +19,9 @@ local function lazyLoadSmwMap()
 	end
 end
 
+local serializer = require("ext/serializer")
+local clearpipe = require("blocks/ai/clearpipe")
+
 local sr = {}
 
 local keys = {"run", "altRun", "up", "down", "left", "right", "jump", "altJump", "dropItem", "pause"}
@@ -34,11 +37,16 @@ local charToKey = {
 	n = "run",
 	t = "altRun",
 }
+local keyToChar = {}
+for k,v in pairs(charToKey) do
+	keyToChar[v] = k
+end
 
 local sectionInputs, currentInputs, currentSect, addr, runFunction, checkCondition
 local showingMessageBox = false
 local flags = {
 	ignorePause = false,
+	ignoreDeath = false,
 }
 
 local strToComparison = {
@@ -522,7 +530,6 @@ end
 local function manageInputs()
 	local inputs
 	if inputOverrideTimer > 0 then
-		-- print("inputOverrideTimer > 0")
 		inputs = inputOverride
 		inputOverrideTimer = inputOverrideTimer - 1
 	else
@@ -534,20 +541,21 @@ local function manageInputs()
 		newkeys[charToKey[c] or error("Invalid key code: "..c)] = true
 	end
 	for _,k in ipairs(keys) do
-		-- if newkeys[k] then
-			-- player.keys[k] = true
-		-- else
-			-- player.keys[k] = false
-		-- end
 		player.keys[k] = newkeys[k]
 		setRawKey(k, newkeys[k])
 	end
+	clearpipe.overrideInput(player, "up", newkeys.up)
+	clearpipe.overrideInput(player, "down", newkeys.down)
+	clearpipe.overrideInput(player, "left", newkeys.left)
+	clearpipe.overrideInput(player, "right", newkeys.right)
 end
 
 local function runInstruction(recursiveCall)
 
+	if Misc.isPaused() and not flags.ignorePause then return end
+
 	local doNext
-	if not Misc.isPaused() or not flags.ignorePause and inputOverrideTimer <= 0 then
+	if inputOverrideTimer <= 0 then
 		if not recursiveCall and speedrunOptimization.started then
 			checkOptimizationConditions()
 		end
@@ -570,17 +578,83 @@ local function runInstruction(recursiveCall)
 	end
 end
 
+local file
+local fullpath
+
+-----------------------------------------------
+-- MARK: Input recording
+-----------------------------------------------
+
+--- Set this to true to record a log of inputs. Recorded inputs are saved in __runs/<level name>.rec on death or level exit.
+sr.recordInputs = false
+
+--- Set this to true to play back the inputs logged in the .rec file for the current level.
+sr.playbackInputs = false
+
+--- Simultaneous Recording and Playback
+
+-- If both playbackInputs and recordInputs are set, recorded inputs will be played back until the player makes a new input.
+-- After a new input is made, playback will stop until the level is reloaded, but recording will continue. This allows for combining
+-- multiple takes into a single recording.
+
+--- Set this to true to restore the recording to the way it was before the last run through the level. Useful in case you accidentally
+-- input over a part of the recording that you wanted to keep, like a fool. (This happened to me, so I added this)
+-- Don't forget to clear this after restoring. This won't do anything if playbackInputs is not set.
+sr.restoreBackupRecording = false
+
+-- Inputs recorded this session. Has a subtable for each section of the level.
+local recordedInputs = {}
+-- True if the level ended, either through player death or level restart.
+local endedLevel
+-- True if new inputs have been recorded during this play session. Reset when the level ends.
+local recordedNewInputs = false
+
+local function getCurrentInputString()
+	local result = ""
+	for _,v in ipairs(keys) do
+		if player.rawKeys[v] then
+			result = result..keyToChar[v]
+		end
+	end
+	return result
+end
+
+--- Add the current inputs from the player to the recording.
+-- @tparam string currentInputs Inputs this tick.
+-- @return true if more than zero inputs were made this tick.
+local function handleInputRecording(currentInputs)
+	local s = player.section
+	if not recordedInputs[s] then
+		recordedInputs[s] = {}
+	end
+	local count = #recordedInputs[s]
+	if currentInputs == recordedInputs[s][count-1] then
+		recordedInputs[s][count][1] = recordedInputs[s][count][1] + 1
+	else
+		table.insert(recordedInputs[s], count+1, currentInputs)
+		table.insert(recordedInputs[s], count+2, { 1 })
+	end
+	return #currentInputs > 0
+end
+
+--------------------------------------------
+-- MARK: Events
+--------------------------------------------
+
 -- registerEvent(sr, "onInputUpdate")
 function sr.onInitAPI()
 	registerEvent(sr, "onInputUpdate")
-	-- registerEvent(sr, "onDrawEnd")
+	registerEvent(sr, "onDrawEnd")
 	-- registerEvent(sr, "onInputUpdate", "onInputUpdateLate", false)
 	-- registerEvent(sr, "onTick", "onInputUpdateLate")
 	registerEvent(sr, "onStart", "onStart", false)
 	registerEvent(sr, "onMessageBox")
 	-- stuff to find a working seed while AFK
-	-- registerEvent(sr, "onPostPlayerKill")
-	-- registerEvent(sr, "onExitLevel")
+	-- registerEvent(sr, "onPostPlayerKill", "onEndLevel")
+	-- registerEvent(sr, "onExitLevel", "onEndLevel")
+	-- input recording stuff
+	registerEvent(sr, "onPostPlayerKill", "onEndLevel")
+	registerEvent(sr, "onExitLevel", "onEndLevel")
 end
 
 local seed
@@ -599,14 +673,15 @@ function sr.onMessageBox()
 end
 
 function sr.onStart()
-	local file = "__runs/"..Level.filename():gsub(".lvlx", ""):gsub(".lvl","")
-	local f = io.open(Misc.episodePath()..file..".lua")
+	file = "__runs/"..Level.filename():gsub(".lvlx", ""):gsub(".lvl","")
+	local epPath = Misc.episodePath()
+	fullpath = epPath..file
+	local restorePath = epPath.."__runs/latest.rec.bak"
+	local f = io.open(fullpath..".lua")
 	local seedOverride
 	if f ~= nil then
 		f:close()
-		-- Misc.dialog(file)
 		local inputList = require(file)
-		-- Misc.dialog(inputList)
 		if inputList.global then
 			currentInputs = inputList
 			addr = 1
@@ -619,19 +694,37 @@ function sr.onStart()
 	else
 		sectionInputs = {}
 	end
+	if sr.playbackInputs then
+		if sr.restoreBackupRecording then
+			f = io.open(restorePath)
+			if not f then
+				Misc.dialog("Unable to restore backup: backup file not found.")
+				return
+			end
+			local str = f:read("*all")
+			f:close()
+			f = io.open(fullpath..".rec", "w")
+			f:write(str)
+			f:close()
+			Misc.dialog("Backup restored. Remove the line that sets the restoreBackupRecording from your code, then hit OK to restart.")
+			endedLevel = true
+			Level.finish(LEVEL_END_STATE_ROULETTE, false)
+		else
+			f = io.open(fullpath..".rec")
+			local str = f:read("*all")
+			sectionInputs = serializer.deserialize(str)
+			f:close()
+			f = io.open(restorePath, "w")
+			f:write(str)
+			f:close()
+		end
+	end
 	-- Disable randomization
 	RNG.seed = seedOverride or 8675309
-	-- Misc.dialog("seed = "..RNG.seed)
-	-- seed = RNG.seed -- store the seed as it was when the level started (grabbing it later gives a much larger value that's not so easy to work with)
-	-- registerEvent(sr, "onInputUpdate")
 end
 
 function sr.onInputUpdate()
 
-	-- Misc.dialog("seed = "..RNG.seed)
-	-- if checkCondition{"tg"} then
-		-- Misc.dialog("speedrun onInputUpdate")
-	-- end
 	if lunatime.tick() == 0 then return end
 	if sectionInputs and player.section ~= currentSect then
 		currentSect = player.section
@@ -641,27 +734,33 @@ function sr.onInputUpdate()
 			currentInputs = nil
 		end
 		addr = 1
+		-- Misc.richDialog(currentInputs)
 	end
 	
 	if not Misc.isPaused() then
 		updateVineControl()
 	end
+
+	if player:isDead() and not flags.ignoreDeath then return end
+
+	local inputsThisTick
+	if sr.recordInputs then
+		inputsThisTick = getCurrentInputString()
+		recordedNewInputs = recordedNewInputs or #inputsThisTick > 0
+	end
 	
-	-- if not currentInputs then
-		-- Misc.dialog("no current inputs")
-	-- elseif addr > #currentInputs then
-		-- Misc.dialog("addr is too high")
-	-- elseif not not flags.ignorePause and Misc.isPaused() then
-		-- Misc.dialog("paused")
-	-- end
-	if not currentInputs or addr > #currentInputs then return end
-	
-	-- Misc.dialog(lunatime.tick()..": "..addr)
-	runInstruction()
-	
-	-- if player.keys.jump == KEYS_PRESSED and Misc.isPaused() then
-		-- Misc.dialog("sr: jump pressed")
-	-- end
+	-- Misc.dialog("inputsThisTick: "..inputsThisTick)
+	-- Misc.dialog("recordedNewInputs: "..tostring(recordedNewInputs))
+	-- Misc.dialog("addr <=> #currentInputs: "..tostring(addr).." <=> "..tostring(#currentInputs))
+	if not recordedNewInputs and currentInputs and addr <= #currentInputs then
+		runInstruction() -- changes the input
+		inputsThisTick = getCurrentInputString()
+	end
+
+	-- Misc.dialog("forced inputsThisTick: "..inputsThisTick)
+	if sr.recordInputs then
+		handleInputRecording(inputsThisTick)
+	end
 	
 	showingMessageBox = false
 end
@@ -684,6 +783,25 @@ end
 function sr.onDrawEnd()
 	for _,k in ipairs(keys) do
 		rawset(player.rawKeys, k, nil)
+	end
+end
+
+function sr.onEndLevel()
+	-- This will be called more than once if the player dies and the level is restarted
+	-- We only want it to run once per level load
+	-- Only overwrite the recording if new inputs were recorded
+	if sr.recordInputs and recordedNewInputs and not endedLevel then
+		recordedInputs.version = 0
+		local sectionInputs = recordedInputs[currentSect]
+		-- shorten the length of the last input if it's a null input
+		if sectionInputs[#sectionInputs - 1] == "" then
+			sectionInputs[#sectionInputs][1] = 1
+		end
+		local f = assert(io.open(Misc.episodePath()..file..".rec", "w"))
+		f:write(serializer.serialize(recordedInputs))
+		f:close()
+		endedLevel = true
+		recordedNewInputs = false
 	end
 end
 
