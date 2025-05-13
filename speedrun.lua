@@ -658,6 +658,7 @@ function sr.onInitAPI()
 end
 
 local seed
+local legacySeed
 function sr.onPostPlayerKill(p)
 	Level.exit(0) -- will immediately restart the level if in testing mode
 end
@@ -679,6 +680,7 @@ function sr.onStart()
 	local restorePath = epPath.."__runs/latest.rec.bak"
 	local f = io.open(fullpath..".lua")
 	local seedOverride
+	local legacySeedOverride
 	if f ~= nil then
 		f:close()
 		local inputList = require(file)
@@ -691,6 +693,7 @@ function sr.onStart()
 			assert(sectionInputs, "sectionInputs empty after set")
 		end
 		seedOverride = inputList.seed
+		legacySeedOverride = inputList.legacySeed
 	else
 		sectionInputs = {}
 	end
@@ -721,6 +724,7 @@ function sr.onStart()
 	end
 	-- Disable randomization
 	RNG.seed = seedOverride or 8675309
+	LegacyRNG.seed = legacySeedOverride or 8675309
 end
 
 function sr.onInputUpdate()
